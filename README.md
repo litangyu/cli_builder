@@ -11,5 +11,11 @@ Power by [google/zx](https://github.com/google/zx)
 * Install google/zx first
   ```npm i -g zx```
 
+* Config HBuilderX CLI to your terminal environment
+```
+# HBuilder CLI
+export PATH=${PATH}:/Applications/HBuilderX.app/Contents/MacOS/
+```
+
 * Run script
   ```zx generate_app_resources.mjs```
