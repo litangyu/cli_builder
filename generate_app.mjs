@@ -2,7 +2,7 @@
 const versionName = '1.0.1'
 
 console.log(chalk.blue(`Hi~ Welcome to this tool. VERSION: ${versionName}.\n`))
-console.log(chalk.blue(`Currently we just support HBuilderX version 4.25 and above. For versions lower than this, please use the 0.0.3 version of this tool.\n`))
+console.log(chalk.blue(`Currently we just support HBuilderX version 4.25 and above. For versions lower than this, please use the 1.0.0 version of this tool.\n`))
 
 await $`cli open`.quiet()
 // // Check 'HBuilderX' is running, if not, open it.
