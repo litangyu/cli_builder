@@ -1,7 +1,8 @@
 #!/usr/bin/env zx
-const versionName = '1.0.0'
+const versionName = '1.0.1'
 
-console.log(chalk.blue(`Hi~ Welcome to this tool. VERSION: ${versionName}\n`))
+console.log(chalk.blue(`Hi~ Welcome to this tool. VERSION: ${versionName}.\n`))
+console.log(chalk.blue(`Currently we just support HBuilderX version 4.25 and above. For versions lower than this, please use the 0.0.3 version of this tool.\n`))
 
 await $`cli open`.quiet()
 // // Check 'HBuilderX' is running, if not, open it.
@@ -69,9 +70,11 @@ console.log(chalk.blue('Building... Please wait amount.'))
 // TODO Check project has been opened in HBuilderX
 
 // Use 'HBuilderX' generate app resource
-let result = await $`cli publish --platform APP --type appResource --project ${projectName} | grep -o -E "[A-Za-z0-9\/\_\-]+\/\_\_UNI\_\_[A-Za-z0-9]+\/www"`
-let publishAppResourceDir = await $`echo ${result} | tr -d '\n'`
-cd(`${publishAppResourceDir}/..`)
+let result = await $`cli publish --platform APP --type appResource --project ${projectName} | grep -o -E "导出成功，路径为：(.+)" | sed -E 's/导出成功，路径为：//g' | tr -d '\x1B[39m' | tr -d '\n'`
+console.log(chalk.green('Genarate app resource PASS. Export path: ' + result.stdout + '\n'))
+let publishAppResourceDir = result.stdout
+
+cd(`${publishAppResourceDir}`)
 publishAppResourceDir = await $`pwd`
 
 // Check apps assets folder exists
@@ -81,7 +84,7 @@ console.log(chalk.green('Check PASS\n'))
 
 // Delete old files and copy new ones
 await $`rm -rf *`
-await $`cp -r ${publishAppResourceDir} ./`
+await $`cp -r ${publishAppResourceDir}/* ./`
 
 // Use script 'gradlew' assemble build type release apk
 cd(androidProjectDir)
