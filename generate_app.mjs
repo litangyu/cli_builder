@@ -1,8 +1,8 @@
 #!/usr/bin/env zx
-const versionName = '1.0.1'
+const versionName = '1.0.2'
 
 console.log(chalk.blue(`Hi~ Welcome to this tool. VERSION: ${versionName}.\n`))
-console.log(chalk.blue(`Currently we just support HBuilderX version 4.25 and above. For versions lower than this, please use the 1.0.0 version of this tool.\n`))
+console.log(chalk.blue(`Currently we just support @dcloudio/uni-app '3.0.0-4020420240722002' and above. For versions lower than this, please use the 1.0.0 version of this tool.\n`))
 
 await $`cli open`.quiet()
 // // Check 'HBuilderX' is running, if not, open it.
@@ -70,9 +70,28 @@ console.log(chalk.blue('Building... Please wait amount.'))
 // TODO Check project has been opened in HBuilderX
 
 // Use 'HBuilderX' generate app resource
-let result = await $`cli publish --platform APP --type appResource --project ${projectName} | grep -o -E "导出成功，路径为：(.+)" | sed -E 's/导出成功，路径为：//g' | tr -d '\x1B[39m' | tr -d '\n'`
-console.log(chalk.green('Genarate app resource PASS. Export path: ' + result.stdout + '\n'))
-let publishAppResourceDir = result.stdout
+// let path = await $`cli publish --platform APP --type appResource --project ${projectName} | grep -o -E "导出成功，路径为：" | sed -E "s/导出成功，路径为：//g" | tr -d "\\\n"`
+// 执行命令并获取输出
+let output = await $`cli publish --platform APP --type appResource --project ${projectName}`;
+
+// 获取标准输出
+let stdout = output.stdout;
+
+// 清理 ANSI 转义序列和控制字符
+stdout = stdout.replace(/\x1B\[[0-9;]*m/g, '');
+
+// 使用正则表达式提取路径
+const match = stdout.match(/(?:导出成功，路径为：|the path is:)\s*([^\n\r]+)/);
+let path = match ? match[1].trim() : '';
+let publishAppResourceDir = ""
+if (path) {
+    console.log(`提取的路径为: ${path}`);
+    publishAppResourceDir = path
+} else {
+    console.log("未找到导出路径");
+}
+
+console.log(chalk.green('Genarate app resource PASS. Export path: ' + path + '\n'))
 
 cd(`${publishAppResourceDir}`)
 publishAppResourceDir = await $`pwd`
