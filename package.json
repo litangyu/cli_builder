@@ -1,6 +1,7 @@
 {
   "name": "cli_builder",
-  "version": "1.0.0",
+  "version": "1.2.0",
+  "type": "module",
   "description": "This tool helps you generate uni-app offline packaged app resources and copy them to a specified Android project.",
   "main": "index.js",
   "scripts": {
