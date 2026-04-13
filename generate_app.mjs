@@ -1,5 +1,17 @@
 #!/usr/bin/env zx
-const versionName = '1.1.0'
+import {
+  stripAnsiCodes,
+  extractNewFormatPath,
+  extractOldFormatPath,
+  findUniDirectory,
+  parseUserInfoOutput,
+  isHBuilderXConnected,
+  isBuildSuccess,
+  isLoginRequired
+} from './src/parser.js'
+import { validateConfig } from './src/config.js'
+
+const versionName = '1.2.0'
 
 console.log(chalk.blue(`Hi~ Welcome to this tool. VERSION: ${versionName}\n`))
 
@@ -22,11 +34,7 @@ async function isHBuilderXRunning() {
   try {
     const result = await $`cli user info 2>&1`.quiet()
     const output = result.stdout.trim()
-    // 当 HBuilderX 未运行时，返回 "通道被关闭" 或 "连接已断开"
-    if (output.includes('通道被关闭') || output.includes('连接已断开')) {
-      return false
-    }
-    return result.exitCode === 0 && output.length > 0
+    return isHBuilderXConnected(output) && result.exitCode === 0 && output.length > 0
   } catch {
     return false
   }
@@ -40,19 +48,7 @@ async function getLoginUser() {
   try {
     const result = await $`cli user info 2>&1`.quiet()
     const output = result.stdout.trim()
-
-    // 成功返回: "用户名\n0:user info:OK"
-    // 未登录返回: 空输出 或 "\n0:user info:OK"
-    if (!output) {
-      return null
-    }
-
-    if (output.includes(':user info:OK')) {
-      const lines = output.split('\n')
-      const username = lines[0].trim()
-      return username || null
-    }
-    return null
+    return parseUserInfoOutput(output)
   } catch {
     return null
   }
@@ -171,14 +167,21 @@ async function main() {
     const configExists = await fs.exists('./cliconfig.json')
     if (configExists) {
       console.log('Using configured parameters from "cliconfig.json"')
-      const { project, android_project_path, android_application_module_path, dcloud_username, dcloud_password, version_info_file_path, node_package_json_file_path } = await fs.readJson('./cliconfig.json')
-      projectName = project
-      androidProjectDir = android_project_path
-      androidApplicationModulePath = android_application_module_path
-      dCloudUsername = dcloud_username
-      dCloudPassword = dcloud_password
-      versionInfoFilePath = version_info_file_path
-      nodePackageJsonFilePath = node_package_json_file_path
+      const config = await fs.readJson('./cliconfig.json')
+
+      // 验证配置
+      const validation = validateConfig(config)
+      if (!validation.valid) {
+        throw new Error(`配置验证失败:\n${validation.errors.map(e => `  - ${e.field}: ${e.error}`).join('\n')}`)
+      }
+
+      projectName = config.project
+      androidProjectDir = config.android_project_path
+      androidApplicationModulePath = config.android_application_module_path
+      dCloudUsername = config.dcloud_username
+      dCloudPassword = config.dcloud_password
+      versionInfoFilePath = config.version_info_file_path
+      nodePackageJsonFilePath = config.node_package_json_file_path
     } else {
       projectName = await question('Which uni-app project do you want to generate offline pack resource? ')
       androidProjectDir = await question('What is the target Android project path? ')
@@ -214,7 +217,7 @@ async function main() {
     let publishOutput = await $`cli publish --platform APP --type appResource --project ${projectName} 2>&1`
 
     // 如果提示需要登录，强制重新登录后重试
-    if (publishOutput.stdout.includes('此功能需要先登录')) {
+    if (isLoginRequired(publishOutput.stdout)) {
       console.log(chalk.yellow('检测到登录状态失效，正在重新登录...'))
       await forceLogin(dCloudUsername, dCloudPassword)
       await sleep(2000)
@@ -222,36 +225,32 @@ async function main() {
     }
 
     // 检查编译是否失败
-    if (publishOutput.stdout.includes('编译失败') || publishOutput.stdout.includes('Build failed')) {
+    if (!isBuildSuccess(publishOutput.stdout)) {
       throw new Error(`项目编译失败:\n${publishOutput.stdout}`)
     }
 
     // 提取导出路径 - 兼容新旧版本输出格式
-    // 新版本格式: "Project xxx export end，the path is: /path/to/unpackage/resources" (英文)
-    //           或 "项目 xxx 导出成功，路径为：/path/to/unpackage/resources" (中文)
-    // 旧版本格式: 包含 "__UNI__xxx/www" 的路径
     let publishAppResourceDir = null
 
-    // 尝试匹配新版本格式（完整路径），支持中英文
-    const pathMatch = publishOutput.stdout.match(/(?:导出成功，路径为：|export end，the path is: )([^\s\n]+)/i)
-    if (pathMatch) {
-      // 清理 ANSI 转义码
-      const resourcesDir = pathMatch[1].replace(/\x1b\[[0-9;]*m/g, '').trim()
+    // 尝试匹配新版本格式
+    const newPathResult = extractNewFormatPath(publishOutput.stdout)
+    if (newPathResult.matched) {
+      const resourcesDir = newPathResult.path
       console.log(chalk.green(`✓ 检测到导出路径: ${resourcesDir}`))
       // 新版本路径指向 resources 目录，需要找到其中的 __UNI__xxx 子目录
       const entries = await fs.readdir(resourcesDir)
-      const uniDir = entries.find(name => name.startsWith('__UNI__'))
+      const uniDir = findUniDirectory(entries)
       if (!uniDir) {
         throw new Error(`在 ${resourcesDir} 中未找到 __UNI__xxx 目录`)
       }
       publishAppResourceDir = `${resourcesDir}/${uniDir}`
     } else {
       // 尝试匹配旧版本格式
-      let result = await $`echo ${publishOutput.stdout} | grep -o -E "[A-Za-z0-9/_-]+/__UNI__[A-Za-z0-9]+/www"`
-      if (!result.stdout.trim()) {
+      const oldPathResult = extractOldFormatPath(publishOutput.stdout)
+      if (!oldPathResult.matched) {
         throw new Error(`未找到导出路径，publish 输出:\n${publishOutput.stdout}`)
       }
-      publishAppResourceDir = await $`echo ${result} | tr -d '\n'`
+      publishAppResourceDir = oldPathResult.path
       cd(`${publishAppResourceDir}/..`)
       publishAppResourceDir = await $`pwd`
     }
