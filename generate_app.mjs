@@ -227,16 +227,24 @@ async function main() {
     }
 
     // 提取导出路径 - 兼容新旧版本输出格式
-    // 新版本格式: "项目 xxx 导出成功，路径为：/path/to/unpackage/resources"
+    // 新版本格式: "Project xxx export end，the path is: /path/to/unpackage/resources" (英文)
+    //           或 "项目 xxx 导出成功，路径为：/path/to/unpackage/resources" (中文)
     // 旧版本格式: 包含 "__UNI__xxx/www" 的路径
     let publishAppResourceDir = null
 
-    // 尝试匹配新版本格式（完整路径）
-    const pathMatch = publishOutput.stdout.match(/导出成功，路径为：([^\s\n]+)/)
+    // 尝试匹配新版本格式（完整路径），支持中英文
+    const pathMatch = publishOutput.stdout.match(/(?:导出成功，路径为：|export end，the path is: )([^\s\n]+)/i)
     if (pathMatch) {
       // 清理 ANSI 转义码
-      publishAppResourceDir = pathMatch[1].replace(/\x1b\[[0-9;]*m/g, '').trim()
-      console.log(chalk.green(`✓ 检测到导出路径: ${publishAppResourceDir}`))
+      const resourcesDir = pathMatch[1].replace(/\x1b\[[0-9;]*m/g, '').trim()
+      console.log(chalk.green(`✓ 检测到导出路径: ${resourcesDir}`))
+      // 新版本路径指向 resources 目录，需要找到其中的 __UNI__xxx 子目录
+      const entries = await fs.readdir(resourcesDir)
+      const uniDir = entries.find(name => name.startsWith('__UNI__'))
+      if (!uniDir) {
+        throw new Error(`在 ${resourcesDir} 中未找到 __UNI__xxx 目录`)
+      }
+      publishAppResourceDir = `${resourcesDir}/${uniDir}`
     } else {
       // 尝试匹配旧版本格式
       let result = await $`echo ${publishOutput.stdout} | grep -o -E "[A-Za-z0-9/_-]+/__UNI__[A-Za-z0-9]+/www"`
