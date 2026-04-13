@@ -12,6 +12,8 @@ Powered by [google/zx](https://github.com/google/zx)
 - Node.js
 - zx (`npm i -g zx`)
 
+> **Other HBuilderX versions?** See [HBuilderX Compatibility Guide](docs/HBUILDERX_COMPATIBILITY.md) for adapting to different versions.
+
 ## Installation
 
 ```bash
@@ -73,3 +75,17 @@ The script will:
 2. Copy `__UNI__xxx` folder to `{android_project}/app/src/main/assets/apps/`
 3. Build release APK via Gradle
 4. Open the output folder
+
+## Development
+
+```bash
+# Run tests
+npm test
+
+# Run tests with coverage
+npm test -- --coverage
+```
+
+## Contributing
+
+If you're using a different HBuilderX version, please refer to [HBuilderX Compatibility Guide](docs/HBUILDERX_COMPATIBILITY.md) for instructions on adapting and contributing support for new versions.
