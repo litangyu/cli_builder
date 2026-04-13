@@ -4,12 +4,14 @@
 
 /**
  * 清理 ANSI 转义码
+ * 支持: \x1b[...m 格式以及 \x1b[... 格式
  * @param {string} str - 包含 ANSI 码的字符串
  * @returns {string} 清理后的字符串
  */
 export function stripAnsiCodes(str) {
   if (typeof str !== 'string') return ''
-  return str.replace(/\x1b\[[0-9;]*m/g, '')
+  // 匹配所有 ANSI 转义序列
+  return str.replace(/\x1b\[[0-9;]*[mGKH]?/g, '')
 }
 
 /**
@@ -99,5 +101,6 @@ export function isBuildSuccess(stdout) {
  * @returns {boolean}
  */
 export function isLoginRequired(stdout) {
-  return stdout?.includes('此功能需要先登录') ?? false
+  if (!stdout || typeof stdout !== 'string') return false
+  return stdout.includes('此功能需要先登录') || stdout.includes('Please Login in!')
 }

@@ -1,0 +1,27 @@
+{
+  "hbuilderx_version": "4.75",
+  "tested_at": "2026-04-13",
+  "cli_outputs": {
+    "user_info": {
+      "logged_in": "用户名\\n0:user info:OK",
+      "logged_out": "\\n0:user info:OK",
+      "disconnected": ["通道被关闭", "连接已断开"]
+    },
+    "publish": {
+      "success_new_format_cn": "项目 xxx 导出成功，路径为：/path/to/resources",
+      "success_new_format_en": "Project xxx export end，the path is: /path/to/resources",
+      "success_old_format": "包含 __UNI__xxx/www 的路径",
+      "build_failed_cn": "编译失败",
+      "build_failed_en": "Build failed",
+      "login_required_cn": "此功能需要先登录",
+      "login_required_en": "Please Login in!"
+    },
+    "login": {
+      "success": "0:user login:OK"
+    }
+  },
+  "notes": [
+    "升级 HBuilderX 后，请收集新版本的 CLI 输出并更新 fixtures",
+    "运行 npm test 检查是否有解析逻辑需要调整"
+  ]
+}
