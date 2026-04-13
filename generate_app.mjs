@@ -226,15 +226,32 @@ async function main() {
       throw new Error(`项目编译失败:\n${publishOutput.stdout}`)
     }
 
-    // 提取导出路径
-    let result = await $`echo ${publishOutput.stdout} | grep -o -E "[A-Za-z0-9\/\_\-]+\/\_\_UNI\_\_[A-Za-z0-9]+\/www"`
-    if (!result.stdout.trim()) {
-      throw new Error(`未找到导出路径，publish 输出:\n${publishOutput.stdout}`)
+    // 提取导出路径 - 兼容新旧版本输出格式
+    // 新版本格式: "项目 xxx 导出成功，路径为：/path/to/unpackage/resources"
+    // 旧版本格式: 包含 "__UNI__xxx/www" 的路径
+    let publishAppResourceDir = null
+
+    // 尝试匹配新版本格式（完整路径）
+    const pathMatch = publishOutput.stdout.match(/导出成功，路径为：([^\s\n]+)/)
+    if (pathMatch) {
+      // 清理 ANSI 转义码
+      publishAppResourceDir = pathMatch[1].replace(/\x1b\[[0-9;]*m/g, '').trim()
+      console.log(chalk.green(`✓ 检测到导出路径: ${publishAppResourceDir}`))
+    } else {
+      // 尝试匹配旧版本格式
+      let result = await $`echo ${publishOutput.stdout} | grep -o -E "[A-Za-z0-9/_-]+/__UNI__[A-Za-z0-9]+/www"`
+      if (!result.stdout.trim()) {
+        throw new Error(`未找到导出路径，publish 输出:\n${publishOutput.stdout}`)
+      }
+      publishAppResourceDir = await $`echo ${result} | tr -d '\n'`
+      cd(`${publishAppResourceDir}/..`)
+      publishAppResourceDir = await $`pwd`
     }
 
-    let publishAppResourceDir = await $`echo ${result} | tr -d '\n'`
-    cd(`${publishAppResourceDir}/..`)
-    publishAppResourceDir = await $`pwd`
+    // 验证目录存在
+    if (!await fs.exists(publishAppResourceDir)) {
+      throw new Error(`导出目录不存在: ${publishAppResourceDir}`)
+    }
 
     // Check apps assets folder exists
     let destDir = `${androidProjectDir}/${androidApplicationModulePath}/src/main/assets/apps`
