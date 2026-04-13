@@ -1,6 +1,16 @@
 {
-  "hbuilderx_version": "4.75",
-  "tested_at": "2026-04-13",
+  "supported_versions": [
+    {
+      "version": "5.06",
+      "tested_at": "2026-04-13",
+      "status": "tested"
+    },
+    {
+      "version": "4.75",
+      "tested_at": "2026-04-13",
+      "status": "tested"
+    }
+  ],
   "cli_outputs": {
     "user_info": {
       "logged_in": "用户名\\n0:user info:OK",

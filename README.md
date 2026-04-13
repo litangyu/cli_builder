@@ -8,7 +8,7 @@ Powered by [google/zx](https://github.com/google/zx)
 
 ## Requirements
 
-- **HBuilderX 4.75** (tested version)
+- **HBuilderX 4.75 / 5.06** (tested versions)
 - Node.js
 - zx (`npm i -g zx`)
 
